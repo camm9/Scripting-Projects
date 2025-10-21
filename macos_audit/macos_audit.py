@@ -1,4 +1,4 @@
-import subprocess, sys
+import subprocess, sys, re
 
 # This script audits your Mac OS configuration for common security configurations.
 
@@ -55,13 +55,16 @@ class SecurityAuditor:
 
         result = self.run_mac_command(cmd)
 
-        
-        
-        # Check for local policies
+        match = re.search(r'\.{(\d+),}', result) # Regex syntax for password policy
 
-        cmd = '/usr/bin/pwpolicy -n /Local/Default -getaccountpolicies '
-
-        result = self.run_mac_command(cmd)
+        if match:
+            print(f"Password Policy found! Your minimum password length policy is:\n\t{match.group(1)} Characters")
+            self.results.append({"PasswordPolicy":match.group(1)})
+            if int(match.group(1)) < 8:
+                print("This is a short password policy. Consider increasing your policy to passwords of 8 or more characters")
+        else:
+            print(f"ALERT! No password policy found.")
+            self.results.append({"PasswordPolicy":"None"})
 
 
 
