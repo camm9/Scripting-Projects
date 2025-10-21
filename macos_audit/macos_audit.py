@@ -50,7 +50,7 @@ class SecurityAuditor:
         """ Check password policy settings """
         print("\nChecking Password Policy...")
 
-        # Check for global policies
+        # Check for policies
         cmd = '/usr/bin/pwpolicy -n /Local/Default -getaccountpolicies || echo "No global policy set"'
 
         result = self.run_mac_command(cmd)
@@ -66,6 +66,22 @@ class SecurityAuditor:
             print(f"ALERT! No password policy found.")
             self.results.append({"PasswordPolicy":"None"})
 
+    # Check Gatekeeper is enabled
+    def check_gatekeeper_status(self):
+        """ Check if Gatekeeper is enabled on device """
+        print("\nChecking Gatekeeper status...")
+        cmd = 'spctl --status'
+        result = self.run_mac_command(cmd)
+
+        if 'enabled' in result:
+            print("Gatekeeper is ENABLED")
+            self.results.append({"Gatekeeper":"Enabled"})
+        else:
+            print("ALERT! Gatekeeper is DISABLED")
+            self.results.append({"Gatekeeper":"Disabled"})
+
+
+    # Check screen lock policy
 
 
     # Check critical system file permissions -- /etc/passwd /etc/shadow /etc/sudoers /var/log
@@ -83,6 +99,7 @@ class SecurityAuditor:
         self.check_firewall_status()
         self.check_filevault_status()
         self.check_pw_policy()
+        self.check_gatekeeper_status()
 
 if __name__ == "__main__":
     auditor = SecurityAuditor()
