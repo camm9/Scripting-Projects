@@ -1,16 +1,25 @@
-import subprocess, sys, re
+import subprocess, sys, re, os, subprocess
 
 # This script audits your Mac OS configuration for common security configurations.
 
 class SecurityAuditor:
     def __init__(self):
         self.results = []
+        self.script_location = os.path.dirname(os.path.abspath(__file__))
 
     def run_mac_command(self, cmd):
         """ Execute Terminal command and return output"""
         try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            return result.stdout.strip()
+            result = subprocess.run(
+                cmd, 
+                shell=True, 
+                capture_output=True, 
+                text=True
+            )
+            
+            # Combine stdout and stderr, or prioritize stderr if stdout is empty
+            output = result.stdout.strip() if result.stdout.strip() else result.stderr.strip()
+            return output
         except Exception as e:
             return f"Error: {e}"
 
@@ -74,17 +83,24 @@ class SecurityAuditor:
         result = self.run_mac_command(cmd)
 
         if 'enabled' in result:
-            print("Gatekeeper is ENABLED")
+            print("\tGatekeeper is ENABLED")
             self.results.append({"Gatekeeper":"Enabled"})
         else:
-            print("ALERT! Gatekeeper is DISABLED")
+            print("\tALERT! Gatekeeper is DISABLED")
             self.results.append({"Gatekeeper":"Disabled"})
 
 
     # Check screen lock policy
+    def check_screen_lock(self):
+        """ Check if screen lock is enabled and if it has a password configured """
+        print("\nChecking Screen Lock policies...")
+        cmd = 'defaults -currentHost read com.apple.screensaver idleTime 2>&1' # check the amount of time for screen lock to start
+        result_idle_time = self.run_mac_command(cmd)
 
-
-    # Check critical system file permissions -- /etc/passwd /etc/shadow /etc/sudoers /var/log
+        if 'does not exist' in result_idle_time:
+            print("\tALERT! No screen lock policy enabled.")
+        else:
+            print(f"\tYour screen lock appears in {result_idle_time} seconds.")
 
     # Run all checks
     def run_audit(self):
@@ -95,11 +111,12 @@ class SecurityAuditor:
         if sys.platform != "darwin":
             print("This script only works for macOS.")
             return
-        
+                
         self.check_firewall_status()
         self.check_filevault_status()
         self.check_pw_policy()
         self.check_gatekeeper_status()
+        self.check_screen_lock()
 
 if __name__ == "__main__":
     auditor = SecurityAuditor()
